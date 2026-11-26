@@ -1,0 +1,54 @@
+{
+  "name": "whomade",
+  "version": "0.1.0",
+  "description": "Who made this image? Verifies C2PA Content Credentials and reads AI-generator metadata. Library, CLI and MCP server.",
+  "keywords": [
+    "ai-detection",
+    "ai-generated",
+    "c2pa",
+    "content-credentials",
+    "provenance",
+    "iptc",
+    "deepfake",
+    "mcp",
+    "mcp-server"
+  ],
+  "license": "MIT",
+  "author": "Ajinkya Muley (https://github.com/ajinkya-cs)",
+  "repository": "github:ajinkya-cs/whomade",
+  "homepage": "https://github.com/ajinkya-cs/whomade#readme",
+  "bugs": "https://github.com/ajinkya-cs/whomade/issues",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "whomade": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc",
+    "test": "node --test test/*.test.ts",
+    "update-trust-list": "node scripts/update-trust-list.ts",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@peculiar/x509": "^2.2.0",
+    "@trustnxt/c2pa-ts": "^0.14.1",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.11",
+    "typescript": "^7.0.2"
+  },
+  "mcpName": "io.github.ajinkya-cs/whomade"
+}
