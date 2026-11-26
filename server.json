@@ -1,0 +1,20 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ajinkya-cs/whomade",
+  "title": "whomade",
+  "description": "Who made this image? Verifies C2PA Content Credentials and reads AI-generator metadata.",
+  "repository": {
+    "url": "https://github.com/ajinkya-cs/whomade",
+    "source": "github"
+  },
+  "version": "0.1.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "whomade",
+      "version": "0.1.0",
+      "transport": { "type": "stdio" },
+      "packageArguments": [{ "type": "positional", "value": "mcp" }]
+    }
+  ]
+}
