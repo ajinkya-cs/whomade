@@ -15,7 +15,10 @@
   ],
   "license": "MIT",
   "author": "Ajinkya Muley (https://github.com/ajinkya-cs)",
-  "repository": "github:ajinkya-cs/whomade",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ajinkya-cs/whomade.git"
+  },
   "homepage": "https://github.com/ajinkya-cs/whomade#readme",
   "bugs": "https://github.com/ajinkya-cs/whomade/issues",
   "type": "module",
