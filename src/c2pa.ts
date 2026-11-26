@@ -52,7 +52,7 @@ export async function readC2pa(bytes: Uint8Array): Promise<Evidence[]> {
     source: 'c2pa',
     confidence: !valid ? 'claimed' : anchor ? 'verified' : 'signed',
     origin: declared.origin,
-    generator: declared.generator ?? active?.claim?.claimGeneratorName,
+    generator: declared.generator,
     signer,
     detail,
   }];
@@ -71,12 +71,9 @@ function declarations(store: ManifestStore) {
         if (!action.digitalSourceType) continue;
         const { name, origin } = sourceTypeOrigin(action.digitalSourceType);
         if (best.sourceType && rank(origin) <= rank(best.origin)) continue;
+        // Claim generators name SDKs ("Google C2PA Core Generator Library"), so only the agent counts.
         const agent = action.softwareAgent;
-        best = {
-          origin,
-          sourceType: name,
-          generator: agent ? (agent.version ? `${agent.name} (${agent.version})` : agent.name) : manifest.claim?.claimGeneratorName,
-        };
+        best = { origin, sourceType: name, generator: agent && (agent.version ? `${agent.name} (${agent.version})` : agent.name) };
       }
     }
   }

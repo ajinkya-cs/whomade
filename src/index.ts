@@ -52,11 +52,13 @@ export async function whomade(input: Uint8Array | ArrayBuffer, options: Options 
   const evidence = [...c2pa, ...openai, ...readMetadata(container), ...(pixels ? geminiWatermark(pixels) : [])]
     .sort((a, b) => RANK[b.confidence] - RANK[a.confidence]);
   const top = evidence.find((e) => e.origin);
+  // Name the maker from the strongest evidence that agrees with the verdict, then fall back to the signer.
+  const agrees = evidence.filter((e) => !top || !e.origin || (e.origin === 'captured') === (top.origin === 'captured'));
   return {
     ai: top?.origin ? top.origin !== 'captured' : null,
     origin: top?.origin,
     confidence: top?.confidence ?? 'none',
-    generator: (top ?? evidence[0])?.generator,
+    generator: agrees.find((e) => e.generator)?.generator ?? agrees.find((e) => e.signer)?.signer,
     evidence,
   };
 }

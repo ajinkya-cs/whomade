@@ -1,6 +1,6 @@
 {
   "name": "whomade",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Who made this image? Verifies C2PA Content Credentials, reads AI-generator metadata and spots Gemini's watermark. Library, CLI and MCP server.",
   "keywords": [
     "ai-detection",
