@@ -10,12 +10,20 @@ const tool = {
   name: 'who_made',
   title: 'Who made this image?',
   description:
-    'Checks who or what made an image. Verifies C2PA Content Credentials against the C2PA trust list and ' +
-    'reads AI-generator metadata (IPTC, EXIF, Stable Diffusion/ComfyUI PNG text). Finding nothing does not ' +
-    'mean a human made it: most sites strip metadata.',
+    'Checks who or what made an image. Verifies C2PA Content Credentials against the C2PA trust list, ' +
+    "reads AI-generator metadata (IPTC, EXIF, Stable Diffusion/ComfyUI PNG text) and looks for Gemini's " +
+    'visible watermark. Finding nothing does not mean a human made it: most sites strip metadata.',
   inputSchema: {
     type: 'object',
-    properties: { source: { type: 'string', description: 'Absolute file path or http(s) URL of the image' } },
+    properties: {
+      source: { type: 'string', description: 'Absolute file path or http(s) URL of the image' },
+      openai: {
+        type: 'boolean',
+        description:
+          "Also ask OpenAI's provenance API for its SynthID watermark, which survives screenshots. " +
+          'Uploads the image to OpenAI; only use when the user agrees. Needs OPENAI_API_KEY.',
+      },
+    },
     required: ['source'],
   },
   annotations: { readOnlyHint: true, openWorldHint: true },
@@ -61,16 +69,17 @@ async function handle(method: string | undefined, params: any) {
       return { tools: [tool] };
     case 'tools/call':
       if (params?.name !== tool.name) throw new RpcError(-32602, `Unknown tool: ${params?.name}`);
-      return call(params.arguments?.source);
+      return call(params.arguments ?? {});
     default:
       throw new RpcError(-32601, `Method not found: ${method}`);
   }
 }
 
-async function call(source: unknown) {
+async function call({ source, openai }: { source?: unknown; openai?: unknown }) {
   try {
     if (typeof source !== 'string' || !source) throw new Error('`source` must be a file path or URL');
-    const report = await whomade(await load(source));
+    if (openai === true && !process.env.OPENAI_API_KEY) throw new Error('`openai` needs OPENAI_API_KEY in the server environment');
+    const report = await whomade(await load(source), { openaiApiKey: openai === true ? process.env.OPENAI_API_KEY : undefined });
     return { content: [{ type: 'text', text: `${describe(report)}\n\n${JSON.stringify(report, null, 2)}` }] };
   } catch (e) {
     return { content: [{ type: 'text', text: (e as Error).message }], isError: true };

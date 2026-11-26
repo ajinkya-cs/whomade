@@ -1,7 +1,7 @@
 {
   "name": "whomade",
-  "version": "0.1.0",
-  "description": "Who made this image? Verifies C2PA Content Credentials and reads AI-generator metadata. Library, CLI and MCP server.",
+  "version": "0.2.0",
+  "description": "Who made this image? Verifies C2PA Content Credentials, reads AI-generator metadata and spots Gemini's watermark. Library, CLI and MCP server.",
   "keywords": [
     "ai-detection",
     "ai-generated",
@@ -11,7 +11,10 @@
     "iptc",
     "deepfake",
     "mcp",
-    "mcp-server"
+    "mcp-server",
+    "gemini",
+    "synthid",
+    "watermark"
   ],
   "license": "MIT",
   "author": "Ajinkya Muley (https://github.com/ajinkya-cs)",
@@ -47,10 +50,13 @@
   "dependencies": {
     "@peculiar/x509": "^2.2.0",
     "@trustnxt/c2pa-ts": "^0.14.1",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.11",
+    "@types/pngjs": "^6.0.5",
     "typescript": "^7.0.2"
   },
   "mcpName": "io.github.ajinkya-cs/whomade"

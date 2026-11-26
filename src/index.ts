@@ -1,17 +1,26 @@
 import { readC2pa } from './c2pa.ts';
 import { readContainer } from './container.ts';
+import { geminiWatermark } from './gemini.ts';
 import { readMetadata } from './metadata.ts';
+import { checkOpenAI } from './openai.ts';
+import { decode } from './pixels.ts';
 
 /**
- * - `verified`: valid C2PA signature from a certificate on the C2PA trust list
+ * - `verified`: valid C2PA signature from a certificate on the C2PA trust list, or the
+ *   generator's own watermark detector
  * - `signed`: valid C2PA signature, but the issuer is not on the trust list
- * - `claimed`: unsigned or broken metadata; anyone can write or strip it
+ * - `claimed`: unsigned metadata, a broken manifest or a visible watermark; easy to fake or strip
  */
 export type Confidence = 'verified' | 'signed' | 'claimed';
 export type Origin = 'generated' | 'edited' | 'captured';
 
+export interface Options {
+  /** Also ask OpenAI's provenance API for its SynthID watermark. This uploads the image to OpenAI. */
+  openaiApiKey?: string;
+}
+
 export interface Evidence {
-  source: 'c2pa' | 'xmp' | 'exif' | 'png';
+  source: 'c2pa' | 'xmp' | 'exif' | 'png' | 'watermark' | 'openai';
   confidence: Confidence;
   origin?: Origin;
   generator?: string;
@@ -30,12 +39,17 @@ export interface Report {
 
 const RANK: Record<Confidence, number> = { verified: 3, signed: 2, claimed: 1 };
 
-export async function whomade(input: Uint8Array | ArrayBuffer): Promise<Report> {
+export async function whomade(input: Uint8Array | ArrayBuffer, options: Options = {}): Promise<Report> {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
   const container = await readContainer(bytes);
   if (!container) throw new Error('Unsupported format: expected PNG, JPEG, WebP, HEIF or AVIF');
 
-  const evidence = [...(await readC2pa(bytes)), ...readMetadata(container)]
+  const pixels = decode(bytes, container.format);
+  const [c2pa, openai] = await Promise.all([
+    readC2pa(bytes),
+    options.openaiApiKey ? checkOpenAI(bytes, container.format, options.openaiApiKey) : [],
+  ]);
+  const evidence = [...c2pa, ...openai, ...readMetadata(container), ...(pixels ? geminiWatermark(pixels) : [])]
     .sort((a, b) => RANK[b.confidence] - RANK[a.confidence]);
   const top = evidence.find((e) => e.origin);
   return {
@@ -49,9 +63,9 @@ export async function whomade(input: Uint8Array | ArrayBuffer): Promise<Report> 
 
 const ORIGIN: Record<Origin, string> = { generated: 'AI-generated', edited: 'AI-edited', captured: 'Camera capture' };
 const CONFIDENCE: Record<Confidence, string> = {
-  verified: 'verified C2PA signature',
+  verified: 'verified',
   signed: 'signed, but not by a trusted issuer',
-  claimed: 'unsigned metadata, easy to fake or strip',
+  claimed: 'unverified, easy to fake or strip',
 };
 
 /** One-line summary of a report. */

@@ -12,6 +12,8 @@ import { describe, whomade } from '../src/index.ts';
 
 // c2pa-signed.jpg and c2pa-tampered.jpg are C.jpg and XCA.jpg from
 // https://github.com/contentauth/c2pa-rs/tree/main/sdk/tests/fixtures (MIT OR Apache-2.0).
+// gemini-corner*.png are bottom-right 360 px crops of real Gemini images from
+// https://github.com/GargantuaX/gemini-watermark-remover/tree/main/src/assets (MIT).
 const fixture = (name: string) => fileURLToPath(new URL(`fixtures/${name}`, import.meta.url));
 
 test('C2PA signed by a certificate outside the trust list is "signed"', async () => {
@@ -78,6 +80,40 @@ test('malformed input', async () => {
   await assert.rejects(whomade(bytes('not an image')), /Unsupported format/);
   const truncated = png(tEXt('parameters', 'Steps: 20')).subarray(0, 40);
   assert.equal((await whomade(truncated)).ai, null);
+});
+
+test("Gemini's visible watermark in real Gemini corners", async () => {
+  for (const [name, margin] of [['gemini-corner.png', 32], ['gemini-corner-weak.png', 96]] as const) {
+    const r = await whomade(await readFile(fixture(name)));
+    assert.deepEqual([r.ai, r.confidence, r.generator], [true, 'claimed', 'Google Gemini'], name);
+    assert.match(r.evidence[0]!.detail, new RegExp(`48 px, ${margin} px from the corner`), name);
+  }
+  const photo = await whomade(await readFile(fixture('c2pa-signed.jpg')));
+  assert.ok(!photo.evidence.some((e) => e.source === 'watermark'));
+});
+
+test('OpenAI provenance API: SynthID detected, and errors surface', async (t) => {
+  const calls: { url: string; init: RequestInit }[] = [];
+  let reply = new Response(JSON.stringify({
+    object: 'content_provenance_check',
+    results: [
+      { type: 'c2pa', outcome: 'not_detected', validation_state: 'not_present', issuer: null, model: null, generated_at: null },
+      { type: 'synthid', outcome: 'detected', model: 'gpt-image', generated_at: '2026-07-27T18:34:12Z' },
+    ],
+  }));
+  t.mock.method(globalThis, 'fetch', async (url: string, init: RequestInit) => (calls.push({ url, init }), reply));
+
+  const r = await whomade(png(), { openaiApiKey: 'sk-test' });
+  assert.deepEqual([r.ai, r.confidence, r.generator], [true, 'verified', 'OpenAI (gpt-image)']);
+  assert.equal(calls[0]!.url, 'https://api.openai.com/v1/content_provenance_checks');
+  assert.equal((calls[0]!.init.headers as Record<string, string>).Authorization, 'Bearer sk-test');
+  assert.equal(((calls[0]!.init.body as FormData).get('file') as File).type, 'image/png');
+
+  reply = new Response('{}', { status: 404 });
+  await assert.rejects(whomade(png(), { openaiApiKey: 'sk-test' }), /HTTP 404, this organization has no access/);
+  assert.equal(calls.length, 2);
+  await whomade(png());
+  assert.equal(calls.length, 2); // never called without a key
 });
 
 test('MCP server: initialize, list and call', async () => {
